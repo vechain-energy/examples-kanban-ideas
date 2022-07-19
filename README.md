@@ -31,7 +31,7 @@ An Idea will be a standard NFT Token with the following attributes:
 
 ### Interface
 
-A react web application with standard antd components:
+A react web application with standard ant design components:
 
 1. Columns for each status
 1. List of Ideas within each column
@@ -186,7 +186,7 @@ The configured contract is stored in `contracts/Idea.sol`.
 
 ## Create Ideas
 
-A public function to create an Idea is the first thing required. The requirement stats Ideas can be created by everyone with a Title and Description. Thats as simple as:
+A public function to create an Idea is the first thing required. The requirement states Ideas can be created by everyone with a Title and Description. Thats as simple as:
 
 ```js
 function createIdea(title, description) public {}
@@ -215,7 +215,7 @@ Run `yarn contract:test:watch` in a terminal and watch what happens. It fails ri
 
 ### Minting Logic
 
-A simple starting point that just mints Ideas is creating a new token and not care much about the data yet:
+A simple starting point that just mints Ideas is creating a new token and does not care much about the data yet:
 
 ```solidity
 function createIdea(string memory title, string memory description) public {
@@ -261,7 +261,7 @@ An Idea has several attributes, this is the list:
 1. `(address[])` List of Upvoters
 1. `(uint)` Status / Progress / Column
 
-Attributes for a single data object can be desecribed with a data structure that is assigned to each token:
+Attributes for a single data object can be described with a data structure that is assigned to each token:
 
 ```sol
 struct Attributes {
@@ -277,7 +277,7 @@ mapping(uint256 =>  Attributes) public tokenAttributes;
 
 ## Title & Description
 
-Due the `public` declarataion of the `tokenAttributes` the data is already available from the outside. It can be expected like this:
+Due the `public` declaration of the `tokenAttributes` the data is already available from the outside. It can be expected like this:
 
 ```js
 it('remembers title and description during minting', async () => {
@@ -309,7 +309,7 @@ function createIdea(string memory title, string memory description) public {
 
 ## Upvotes
 
-Upvotes require a little more logic, while everyone can upvote an idea to increase the priority, upvoting should only be possible one for every wallet.
+Upvotes require a little more logic, while everyone can upvote an idea to increase the priority, upvoting should only be possible once for every wallet.
 
 The function for upvoting can look like this:
 
@@ -341,8 +341,8 @@ On the logic side it is an increment for the upvotes and reject an increment if 
 ```sol
 function upvote(uint256 tokenId) public {
     require(!tokenAttributes[tokenId].addressVoted[msg.sender], "already upvoted");
-    tokenAttributes[tokenId].addressVoted[msg.sender] = true;
 
+    tokenAttributes[tokenId].addressVoted[msg.sender] = true;
     tokenAttributes[tokenId].upvotes++;
 }
 ```
@@ -373,7 +373,7 @@ The expected function can look like this:
 function setStatus(tokenId, status) public onlyOwner {}
 ```
 
-Thats how the expectation are tested:
+Thats how the expectations are tested:
 
 ```
 describe('setStatus(tokenId, status)', () => {
@@ -424,7 +424,7 @@ Tests:       6 passed, 6 total
 
 ## Deployment
 
-The contract is now feature complete and can be deployed to the blockchain to move on to a user interface.
+The contract is now feature complete and can be deployed to the blockchain to allow to move on to a user interface.
 
 The user interface will require information about the contracts address and its interface definition. Both are written into `src/contract.json` for access within the react application:
 
@@ -672,12 +672,12 @@ Step 1 | Step 2 | Step 3 | Transaction
 
 ## Listing
 
-With OpenZepplin's Template for ERC 721 a set of standard functionality was provided. A list of all functions is available at the [OpenZepplin Docs for ERC 721](https://docs.openzeppelin.com/contracts/4.x/api/token/erc721).
+With OpenZepplin's Template for ERC 721 a set of standard functionality was provided. A list of all these functions is available at the [OpenZepplin Docs for ERC 721](https://docs.openzeppelin.com/contracts/4.x/api/token/erc721).
 
-A combination of three functions allows to access all tokens and their data:
+A combination of three allows to access all tokens and their data:
 
 1. `totalSupply()` provides the number of all available tokens
-1. `tokenByIndex(index)` returns the tokenId for each token, allows to fetch all tokenIds by looping from 0 to totalSuppy
+1. `tokenByIndex(index)` returns the tokenId for each token, allows to fetch all tokenIds by looping from 0 to totalSupply
 1. `tokenAttributes(tokenId)` provides access to the custom attributes created for each token
 
 This is the initial loop that combines the three functions into collecting a single list of all tokens:
@@ -704,9 +704,9 @@ This is the initial loop that combines the three functions into collecting a sin
   }, [updateIdeas])
 ```
 
-The `ideas[]` can be filtered or sorted. This is done in the web application because its cheaper than to burden the contract with complexity which increases its size and costs.
+The `ideas[]` can be filtered or sorted. This is done in the web application because it is cheaper than to burden the contract with complexity which increases its size and costs.
 
-The whole component including that shows the ideas in each column group by a fixed number of status in `List.js`:
+The whole component including grouping in columns in `List.js`:
 
 ```jsx
 import { useState, useEffect, useCallback } from 'react'
@@ -778,13 +778,13 @@ export default function List () {
 }
 ```
 
-The `Idea` component is what is being built next.
+The `Idea` component is built next.
 
 ## Upvotes
 
-Ideas are shown with title, description and number of upvotes. ant designs card component shows the data. Similar to publishing new ideas a transaction is executed on a button click.
+Ideas are shown with title, description and number of upvotes. ant designs card component shows the data. For upvotes, similar to publishing new ideas, a transaction is executed on a button click.
 
-To show the user what will be upvoted, a comment is passed to wallet. The comment is show during the signing process.
+To show what will be upvoted, a comment is passed to wallet. The comment is visible during the signing process.
 
 `Idea.js`:
 
@@ -833,7 +833,7 @@ export default function Idea ({ tokenId, title, description, upvotes }) {
 
 Step 1 | Step 2 | Step 3
 :-: | :-: | :-:
-![Upvote Sign](./docs/Upvote,%20Sign.png) | ![Upvote Transaction](./docs/Upvote,%20Transaction.png) | ![Upvote Confirmation](./docs/Upvote,%20Signed.png)
+![sign upvote with comment](./docs/Upvote,%20Sign.png) | ![Upvote Transaction](./docs/Upvote,%20Transaction.png) | ![Upvote Confirmation](./docs/Upvote,%20Signed.png)
 
 
 ## Put it together
@@ -865,7 +865,7 @@ It will not win a design price, but functionality wise it is complete.
 
 ## Change Status
 
-The admin of the application is allowed to change the status of single ideas. An admin is identified by being the owner of the contract which is handled by [OpenZepping Ownable](https://docs.openzeppelin.com/contracts/4.x/api/access#Ownable).
+The admin of the application is allowed to change the status of single ideas. An admin is identified by being the owner of the contract which is handled by [OpenZeppelin Ownable](https://docs.openzeppelin.com/contracts/4.x/api/access#Ownable).
 
 A change on the status is provided with the function:
 
@@ -873,7 +873,7 @@ A change on the status is provided with the function:
 function setStatus(tokenId, status) public onlyOwner {}
 ```
 
-For demonstration purpose the `useCall()` hook will be used to identify the current owner of the contract. If the owner matches the currently signed in account, it will render buttons that allow to change the status.
+For demonstration purpose the `useCall()` hook is used to identify the current owner of the contract. Buttons are only visible if the owner matches the currently signed in account.
 
 `ChangeStatus.js`:
 
@@ -944,9 +944,9 @@ To fetch the updated data after a transaction there are two options:
 
 1. Update on each block
     * Time consuming and wasting resources if nothing changes
-    * Also updates of other users will be shown and might confuse the user
+    * Also updates of other users will be change the view and might confuse the user
 1. Update after each transaction
-    * After submitting a transaction, new date is loaded and shown
+    * After submitting a transaction, new data is loaded
 
 
 The `List.js` component as the entry point can fetch new data with `updateIdeas()` once a transaction has been completed. `useAccount()` offers a list of transaction id's once they are completed:
@@ -976,7 +976,7 @@ All data is now updated after the user completed a transaction.
 ## Resume
 
 The Interface section contained mostly ant design components and using some hooks to access the existing contract.  
-Having access to the artifact (address and abi) of the contract within the project makes it easy to combine backend (contract) and interface.  
+Having access to the artifacts (address and abi) of the contract within the project makes it easy to combine backend (contract) and interface.  
 
 The most challenging part is knowing the functionality provided by standard implementations. Reading the OpenZeppelin documentation or abi in the `contract.json` can help to identify important functions.
 
