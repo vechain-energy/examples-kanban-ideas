@@ -1,25 +1,16 @@
-import logo from './logo.svg';
-import './App.css';
+import { Row, Col } from 'antd'
+import Account from './Account'
+import Create from './Create'
+import List from './List'
 
-function App() {
+function App () {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    <Row gutter={[16, 16]}>
+      <Col span={22} offset={1}><Account /></Col>
+      <Col span={22} offset={1}><List /></Col>
+      <Col span={22} offset={1}><Create /></Col>
+    </Row>
+  )
 }
 
-export default App;
+export default App

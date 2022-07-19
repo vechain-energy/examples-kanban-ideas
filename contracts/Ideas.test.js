@@ -13,7 +13,6 @@ beforeEach(async function () {
   contracts.idea = await Idea.deploy()
 })
 
-
 describe('createIdea(title, description)', () => {
   it('mints token #0 for a new idea', async () => {
     const title = 'Test Title'
@@ -72,7 +71,7 @@ describe('setStatus(tokenId, status)', () => {
   })
 })
 
-async function createIdeaFor(user, ...args) {
+async function createIdeaFor (user, ...args) {
   const { events } = await (await contracts.idea.connect(user).createIdea(...args)).wait()
   const { tokenId } = events.find(({ event }) => event === 'Transfer').args
   return tokenId

@@ -52,6 +52,61 @@ yarn create react-app kanban
 cd kanban
 ```
 
+## React
+
+Setting up the project is a bit of a hassle because react hides some configuration values required to run. [react-app-rewired](https://github.com/timarney/react-app-rewired) helps out:
+
+```shell
+yarn add react-app-rewired
+yarn add --dev assert buffer crypto-browserify stream-http https-browserify os-browserify process stream-browserify util stream
+```
+
+patch `package.json` according to instructions:
+
+```diff
+  /* package.json */
+
+  "scripts": {
+-   "start": "react-scripts start",
++   "start": "react-app-rewired start",
+-   "build": "react-scripts build",
++   "build": "react-app-rewired build",
+-   "test": "react-scripts test",
++   "test": "react-app-rewired test",
+    "eject": "react-scripts eject"
+}
+```
+
+and create a custom `config-overrides.js` to provide all required dependencies:
+
+```js
+const webpack = require('webpack')
+
+module.exports = function override (config, env) {
+  config.ignoreWarnings = [/Failed to parse source map/]
+  config.resolve.fallback = {
+    url: require.resolve('url'),
+    assert: require.resolve('assert'),
+    crypto: require.resolve('crypto-browserify'),
+    http: require.resolve('stream-http'),
+    https: require.resolve('https-browserify'),
+    os: require.resolve('os-browserify/browser'),
+    buffer: require.resolve('buffer'),
+    stream: require.resolve('stream-browserify')
+  }
+
+  config.plugins.push(
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
+      Buffer: ['buffer', 'Buffer']
+    })
+  )
+
+  return config
+}
+```
+
+
 ## Hardhat
 
 ```shell
@@ -108,14 +163,14 @@ $ rm src/App.test.js
 
 To execute hardhat tests easily, a new script `contract:test` and `contract:test:watch` is added to `package.json`:
 
-```json
+```diff
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "contract:test": "hardhat test:jest",
-    "contract:test:watch": "nodemon -e sol --exec 'hardhat test:jest --watch'"
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
+    "eject": "react-app-rewired eject",
++    "contract:test": "hardhat test:jest",
++    "contract:test:watch": "nodemon -e sol --exec 'hardhat test:jest --watch'"
   },
 ```
 
@@ -442,3 +497,486 @@ Ownership transferred to: 0x8C59c63d6458C71B6FF88D57698437524a703084
 With the previous sections a test-driven approach was used to implement standard functionality.
 
 A simple data structure stores all relevant data for a single object. Relying on existing functionality saved a lot of time on custom development for managing new tokens and reading data is made simply defining contract properties as public.
+
+
+# Interface / Web Application
+
+The web application will consist of a grid:
+
+1. Columns group ideas by their status
+1. Ideas are shown as simple cards
+    1. and can be expanded
+1. For user interaction a wallet-connection is provided
+1. An admin can change the status of an idea
+
+The used libraries are not many:
+
+```shell
+yarn add @vechain.energy/use-vechain antd
+```
+
+Run `yarn start` to see what is being built in realtime.
+
+## Connectivity
+
+To connect with the TestNet in `index.js` a `use-vechain` offers a provider to a shared connex instance and some functions for easier interaction. [vechain.energy](https://vechain.energy) is used for fee delegation, to allow all users to interact with the application without worrying about fees:
+
+```diff
+import React from 'react'
+import ReactDOM from 'react-dom/client'
++import 'antd/dist/antd.css'
+import App from './App'
+import reportWebVitals from './reportWebVitals'
++import { VeChainProvider } from '@vechain.energy/use-vechain'
+
+const root = ReactDOM.createRoot(document.getElementById('root'))
+root.render(
+  <React.StrictMode>
++    <VeChainProvider
++      config={{ node: 'https://testnet.veblocks.net', network: 'test' }}
++      options={{ delegate: 'https://sponsor-testnet.vechain.energy/by/90', delegateTest: 'https://sponsor-testnet.vechain.energy/by/90/test' }}
++    >
+      <App />
++    </VeChainProvider>
+  </React.StrictMode>
+)
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+reportWebVitals()
+```
+
+## Identification
+
+The user can be identified by signing a message using Sync2. `use-vechain` helps by providing `useAccount()` hook.
+
+`connect()` allows to identify a user by asking to sign a message. `account` contains the identified user address.
+
+Add `Account.js` for the sign in:
+
+```jsx
+import { useAccount } from '@vechain.energy/use-vechain'
+import { Typography, Button, Alert } from 'antd'
+
+export default function Account () {
+  const { account, error, isLoading, connect, disconnect } = useAccount()
+
+  const Address = () => <Typography.Text type='secondary'>{account.slice(0, 4)}…{account.slice(-4)}</Typography.Text>
+  const handleConnect = () => connect('identify yourself to access the app')
+
+  return (
+    <div>
+      {account && <Button block onClick={disconnect} danger shape='round' icon={<Address />}>&nbsp;sign out</Button>}
+      {!account && <Button block onClick={handleConnect} loading={isLoading} shape='round'>sign in</Button>}
+      {!!error && <Alert message='identification failed' description={error} type='error' closable />}
+    </div>
+  )
+}
+```
+
+And modify `App.js` to display just it:
+
+```jsx
+import { Row, Col } from 'antd'
+import Account from './Account'
+
+function App () {
+  return (
+    <Row gutter={[16, 16]}>
+      <Col span={24}><Account /></Col>
+    </Row>
+  )
+}
+
+export default App
+```
+
+So far users can already sign in and are identified with their public address. Sign out works as well using the `disconnect()` function.
+
+Step 1 | Step 2 | Step 3
+:-: | :-: | :-:
+![Sync2, Cert-Dialog](./docs/Identify,%20Cert.png) | ![Sync2, Agreement Message](./docs/Identify,%20Message.png) | ![Sync2, Signed](./docs/Identify,%20Signed.png)
+
+## Create Ideas
+
+Next stop, core functionality #1: Publishing new ideas
+
+The contracts function call was:
+
+```js
+function createIdea(title, description) public {}
+```
+
+During deployment the contract address and abi was written to `src/contract.json`. `useContract(address, abi)` can use this to provide an object that offers simply interaction with all public functionality:
+
+```js
+const { address, abi } = require('./contract.json')
+// …
+const contract = useContract(address, abi)
+// …
+await contract.createIdea('title', 'a description')
+```
+
+In combination with ant design forms the component in `Create.js` is:
+
+```jsx
+import { useState } from 'react'
+import { useContract } from '@vechain.energy/use-vechain'
+import { Form, Input, Button, Spin, Alert } from 'antd'
+
+const { address, abi } = require('./contract.json')
+const { TextArea } = Input
+
+export default function FormCreate () {
+  const contract = useContract(address, abi)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState()
+
+  const handleCreate = async ({ title, description }) => {
+    setLoading(true)
+    setError()
+    try {
+      await contract.createIdea(title, description)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Spin spinning={loading} tip='Publishing…'>
+      <Form layout='vertical' onFinish={handleCreate}>
+        <Form.Item label='Title' name='title' required>
+          <Input />
+        </Form.Item>
+        <Form.Item label='Description' name='description' required>
+          <TextArea rows={4} />
+        </Form.Item>
+        <Form.Item>
+          <Button block type='primary' htmlType='submit'>Add Idea</Button>
+        </Form.Item>
+        {!!error && <Alert message='publication failed' description={error} type='error' closable />}
+      </Form>
+    </Spin>
+  )
+}
+```
+
+The component can be used within the page or a modal. It will work self-contained.
+
+Step 1 | Step 2 | Step 3 | Transaction
+:-: | :-: | :-: | :-:
+![Create Transaction](./docs/Create,%20Transaction.png) | ![Sign Transaction](docs/Create,%20Sign.png) | ![Signed Transaction](docs/Create,%20Signed.png) | ![Transaction Details](docs/Create,%20Transaction%20Details.png)
+
+## Listing
+
+With OpenZepplin's Template for ERC 721 a set of standard functionality was provided. A list of all functions is available at the [OpenZepplin Docs for ERC 721](https://docs.openzeppelin.com/contracts/4.x/api/token/erc721).
+
+A combination of three functions allows to access all tokens and their data:
+
+1. `totalSupply()` provides the number of all available tokens
+1. `tokenByIndex(index)` returns the tokenId for each token, allows to fetch all tokenIds by looping from 0 to totalSuppy
+1. `tokenAttributes(tokenId)` provides access to the custom attributes created for each token
+
+This is the initial loop that combines the three functions into collecting a single list of all tokens:
+
+```js
+  const contract = useContract(address, abi)
+
+  const updateIdeas = useCallback(async function () {
+    const totalSupply = await contract.totalSupply()
+    const ideas = []
+
+    // loop from 0 to totalSupply to read each token
+    for (let index = 0; index < totalSupply; index++) {
+      const tokenId = await contract.tokenByIndex(index)
+      const attributes = await contract.tokenAttributes(tokenId)
+      ideas.push({ tokenId, ...attributes })
+    }
+
+    setIdeas(ideas)
+  }, [contract])
+
+  useEffect(() => {
+    updateIdeas()
+  }, [updateIdeas])
+```
+
+The `ideas[]` can be filtered or sorted. This is done in the web application because its cheaper than to burden the contract with complexity which increases its size and costs.
+
+The whole component including that shows the ideas in each column group by a fixed number of status in `List.js`:
+
+```jsx
+import { useState, useEffect, useCallback } from 'react'
+import { useContract } from '@vechain.energy/use-vechain'
+import { Row, Col, Typography } from 'antd'
+import Idea from './Idea'
+
+const { address, abi } = require('./contract.json')
+const { Title } = Typography
+
+export default function List () {
+  const contract = useContract(address, abi)
+  const [ideasByStatus, setIdeasByStatus] = useState([])
+
+  const updateIdeas = useCallback(async function () {
+    if (!contract) { return }
+
+    const totalSupply = await contract.totalSupply()
+    const ideas = []
+
+    // loop from 0 to totalSupply to read each token
+    for (let index = 0; index < totalSupply; index++) {
+      const tokenId = await contract.tokenByIndex(index)
+      const attributes = await contract.tokenAttributes(tokenId)
+      ideas.push({ tokenId, ...attributes })
+    }
+
+    // sort ideas and group by status
+    setIdeasByStatus(ideas
+      .sort((idea1, idea2) => idea2.upvotes - idea1.upvotes)
+      .reduce((byStatus, idea) => {
+        const status = Number(idea.status)
+        if (!byStatus[status]) {
+          byStatus[status] = []
+        }
+
+        byStatus[status].push(idea)
+        return byStatus
+      }, []))
+  }, [contract])
+
+  useEffect(() => {
+    updateIdeas()
+  }, [updateIdeas])
+
+  return (
+    <Row gutter={[16, 16]}>
+      <Col span={6}>
+        <Title level={3} align='center'>New Ideas</Title>
+        {ideasByStatus[0]?.map(idea => <Idea key={idea.tokenId} {...idea} />)}
+      </Col>
+
+      <Col span={6}>
+        <Title level={3} align='center'>in Progress</Title>
+        {ideasByStatus[1]?.map(idea => <Idea key={idea.tokenId} {...idea} />)}
+      </Col>
+
+      <Col span={6}>
+        <Title level={3} align='center'>Completed</Title>
+        {ideasByStatus[2]?.map(idea => <Idea key={idea.tokenId} {...idea} />)}
+      </Col>
+
+      <Col span={6}>
+        <Title level={3} align='center'>Cancelled</Title>
+        {ideasByStatus[3]?.map(idea => <Idea key={idea.tokenId} {...idea} />)}
+      </Col>
+    </Row>
+  )
+}
+```
+
+The `Idea` component is what is being built next.
+
+## Upvotes
+
+Ideas are shown with title, description and number of upvotes. ant designs card component shows the data. Similar to publishing new ideas a transaction is executed on a button click.
+
+To show the user what will be upvoted, a comment is passed to wallet. The comment is show during the signing process.
+
+`Idea.js`:
+
+```jsx
+import { useState } from 'react'
+import { useContract } from '@vechain.energy/use-vechain'
+import { Button, Alert, Card } from 'antd'
+
+const { address, abi } = require('./contract.json')
+
+export default function Idea ({ tokenId, title, description, upvotes }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState()
+  const contract = useContract(address, abi)
+
+  const handleUpvote = async () => {
+    setLoading(true)
+    setError()
+    try {
+      await contract.upvote(tokenId, { comment: `Upvote ${title}` })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card
+      title={title}
+      actions={[
+        <Button key='upvote' type='link' block onClick={handleUpvote} loading={loading}>{upvotes} votes</Button>
+      ]}
+      size='small'
+      bordered
+      hoverable
+      style={{ marginBottom: 24 }}
+    >
+      {!!error && <Alert message='upvote failed' description={error} type='error' closable />}
+      <div style={{ whiteSpace: 'pre-wrap' }}>{description}</div>
+    </Card>
+  )
+}
+```
+
+
+Step 1 | Step 2 | Step 3
+:-: | :-: | :-:
+![Upvote Sign](./docs/Upvote,%20Sign.png) | ![Upvote Transaction](./docs/Upvote,%20Transaction.png) | ![Upvote Confirmation](./docs/Upvote,%20Signed.png)
+
+
+## Put it together
+
+Combining Account information, Listing and publishing new ideas into the `App.js` completes the functionality:
+
+```jsx
+import { Row, Col } from 'antd'
+import Account from './Account'
+import Create from './Create'
+import List from './List'
+
+function App () {
+  return (
+    <Row gutter={[16, 16]}>
+      <Col span={22} offset={1}><Account /></Col>
+      <Col span={22} offset={1}><List /></Col>
+      <Col span={22} offset={1}><Create /></Col>
+    </Row>
+  )
+}
+
+export default App
+```
+
+It will not win a design price, but functionality wise it is complete.
+
+![Application](docs/App.png)
+
+## Change Status
+
+The admin of the application is allowed to change the status of single ideas. An admin is identified by being the owner of the contract which is handled by [OpenZepping Ownable](https://docs.openzeppelin.com/contracts/4.x/api/access#Ownable).
+
+A change on the status is provided with the function:
+
+```js
+function setStatus(tokenId, status) public onlyOwner {}
+```
+
+For demonstration purpose the `useCall()` hook will be used to identify the current owner of the contract. If the owner matches the currently signed in account, it will render buttons that allow to change the status.
+
+`ChangeStatus.js`:
+
+```jsx
+import { useState } from 'react'
+import { useContract, useAccount, useCall } from '@vechain.energy/use-vechain'
+import { Button, Alert } from 'antd'
+
+const { address, abi } = require('./contract.json')
+
+export default function ChangeStatus ({ tokenId, status }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState()
+  const contract = useContract(address, abi)
+  const { account } = useAccount()
+  const owner = useCall(address, abi.find(({ name }) => name === 'owner'))
+
+  const handleStatus = (newStatus) => async () => {
+    setLoading(true)
+    setError()
+    try {
+      await contract.setStatus(tokenId, newStatus, { comment: `Change status to ${newStatus}` })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (account !== owner) {
+    return <></>
+  }
+
+  return (
+    <>
+      {!!error && <Alert message='status change failed' description={error} type='error' closable />}
+      <Button type={status === 0 ? 'primary' : 'secondary'} onClick={handleStatus(0)} loading={loading}>0</Button>
+      <Button type={status === 1 ? 'primary' : 'secondary'} onClick={handleStatus(1)} loading={loading}>1</Button>
+      <Button type={status === 2 ? 'primary' : 'secondary'} onClick={handleStatus(2)} loading={loading}>2</Button>
+      <Button type={status === 3 ? 'primary' : 'secondary'} onClick={handleStatus(3)} loading={loading}>3</Button>
+    </>
+  )
+}
+```
+
+The component is used in each Idea:
+
+```diff
++ import ChangeStatus from './ChangeStatus'
+
+const { address, abi } = require('./contract.json')
+
+- export default function Idea ({ tokenId, title, description, upvotes }) {
++ export default function Idea ({ tokenId, title, description, upvotes, status }) {
+...
+      {!!error && <Alert message='upvote failed' description={error} type='error' closable />}
+      <div style={{ whiteSpace: 'pre-wrap' }}>{description}</div>
++      <ChangeStatus tokenId={tokenId} status={Number(status)} />
+    </Card>
+...
+```
+
+## Auto-Update
+
+Data is currently loaded during render time. When changes are made, nothing happens on the interface except a loading indicator.
+
+To fetch the updated data after a transaction there are two options:
+
+1. Update on each block
+    * Time consuming and wasting resources if nothing changes
+    * Also updates of other users will be shown and might confuse the user
+1. Update after each transaction
+    * After submitting a transaction, new date is loaded and shown
+
+
+The `List.js` component as the entry point can fetch new data with `updateIdeas()` once a transaction has been completed. `useAccount()` offers a list of transaction id's once they are completed:
+
+```diff
+- import { useContract } from '@vechain.energy/use-vechain'
++ import { useContract, useAccount } from '@vechain.energy/use-vechain'
+
+...
+export default function List () {
+  const contract = useContract(address, abi)
++  const { transactionIds } = useAccount()
+
+...
+
+  useEffect(() => {
+    updateIdeas()
+-  }, [updateIdeas])
++  }, [updateIdeas, transactionIds])
+
+...
+```
+
+All data is now updated after the user completed a transaction.
+
+
+## Resume
+
+The Interface section contained mostly ant design components and using some hooks to access the existing contract.  
+Having access to the artifact (address and abi) of the contract within the project makes it easy to combine backend (contract) and interface.  
+
+The most challenging part is knowing the functionality provided by standard implementations. Reading the OpenZeppelin documentation or abi in the `contract.json` can help to identify important functions.
+
