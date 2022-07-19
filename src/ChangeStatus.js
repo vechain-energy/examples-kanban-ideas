@@ -34,6 +34,7 @@ export default function ChangeStatus ({ tokenId, status }) {
       <Button type={status === 1 ? 'primary' : 'secondary'} onClick={handleStatus(1)} loading={loading}>1</Button>
       <Button type={status === 2 ? 'primary' : 'secondary'} onClick={handleStatus(2)} loading={loading}>2</Button>
       <Button type={status === 3 ? 'primary' : 'secondary'} onClick={handleStatus(3)} loading={loading}>3</Button>
+      <Button type={status === 4 ? 'primary' : 'secondary'} danger onClick={handleStatus(4)} loading={loading}>delete</Button>
     </>
   )
 }
